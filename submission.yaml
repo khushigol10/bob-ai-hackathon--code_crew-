@@ -9,21 +9,21 @@
 # =============================================================================
 
 team:
-  name: ""                             # REQUIRED — e.g., "Orion Squad"
-  track: ""                            # REQUIRED — one of: AI | DevOps | Sustainability | Open
+  name: "code-crew"                             # REQUIRED — e.g., "Orion Squad"
+  track: "ai"                            # REQUIRED — one of: AI | DevOps | Sustainability | Open
   lead:
-    name: ""                           # REQUIRED — e.g., "Alice Chen"
-    email: ""                          # REQUIRED — e.g., "alice.chen@ibm.com"
+    name: "khushi gol"                           # REQUIRED — e.g., "Alice Chen"
+    email: "khushigol88@gmail.com"                          # REQUIRED — e.g., "alice.chen@ibm.com"
   members:
-    - name: ""                         # REQUIRED — Team member 1
-      email: ""
-    - name: ""                         # Add more members by copying the two lines above
-      email: ""
-    - name: ""
-      email: ""
+    - name: "yana savaliya"                         # REQUIRED — Team member 1
+      email: "yanasavaliya1118@gmail.com"
+    - name: "esha halani"                         # Add more members by copying the two lines above
+      email: "eshahalani.ce@gmail.com"
+    - name: "shukti rabadiya"
+      email: "shuktirabadiya178@gmail.com"
 
 submission:
-  title: ""                            # REQUIRED — Project display name, e.g., "SmartOps Dashboard"
+  title: "L2 Supply Chain Disruption Assistant & Fleet Utilisation Optimizer"                            # REQUIRED — Project display name, e.g., "SmartOps Dashboard"
 
   problem_statement: >                 # REQUIRED — 1-3 sentences. What problem? Who has it?
     Replace this text with a concise description of the real-world problem
