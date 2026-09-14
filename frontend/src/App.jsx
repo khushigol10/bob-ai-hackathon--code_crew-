@@ -11,14 +11,14 @@ function App() {
       route: "Mumbai → Rotterdam",
       cargo: "Vaccines ❄️",
       value: 520000,
-      risk: "High",
+      risk: "Critical",
     },
     {
       id: "SHIP-002",
-      route: "Chennai → Singapore",
-      cargo: "Perishable Food ❄️",
+      route: "Singapore → Rotterdam",
+      cargo: "Perishables ❄️",
       value: 180000,
-      risk: "Critical",
+      risk: "High",
     },
     {
       id: "SHIP-003",
@@ -33,30 +33,23 @@ function App() {
     {
       id: "TRUCK-017",
       type: "Refrigerated Truck",
-      location: "Rotterdam",
+      location: "Mumbai",
       status: "AVAILABLE",
-      utilisation: 35,
+      utilisation: 42,
     },
     {
       id: "TRUCK-021",
       type: "Standard Truck",
-      location: "Mumbai",
-      status: "AVAILABLE",
-      utilisation: 80,
-    },
-    {
-      id: "TRUCK-034",
-      type: "Refrigerated Truck",
-      location: "Dubai",
-      status: "UNAVAILABLE",
-      utilisation: 95,
-    },
-    {
-      id: "TRUCK-042",
-      type: "Standard Truck",
       location: "Delhi",
+      status: "BUSY",
+      utilisation: 91,
+    },
+    {
+      id: "TRUCK-032",
+      type: "Refrigerated Truck",
+      location: "Pune",
       status: "AVAILABLE",
-      utilisation: 25,
+      utilisation: 35,
     },
   ];
 
@@ -96,7 +89,7 @@ function App() {
 
           <div className="metric-card">
             <span>Available Fleet</span>
-            <strong>3</strong>
+            <strong>2</strong>
           </div>
         </section>
 
@@ -210,17 +203,17 @@ function App() {
 
             <div>
               <span>Shipments Impacted</span>
-              <strong>1</strong>
+              <strong>2</strong>
             </div>
 
             <div>
               <span>Cold-Chain Shipments</span>
-              <strong>1</strong>
+              <strong>2</strong>
             </div>
 
             <div>
               <span>Cargo Value at Risk</span>
-              <strong>$520,000</strong>
+              <strong>$700,000</strong>
             </div>
 
             <div>
