@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from .ai_provider import get_provider
+from .data import DISRUPTIONS, FLEET, SHIPMENTS
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/assistant", tags=["assistant"])
@@ -33,8 +34,14 @@ def _get_provider():
 # Request / response models
 # ---------------------------------------------------------------------------
 
+class HistoryMessage(BaseModel):
+    role: str   # "user" | "assistant"
+    content: str
+
+
 class AssistantRequest(BaseModel):
     question: str
+    history: list[HistoryMessage] = []
 
 
 class AssistantResponse(BaseModel):
@@ -47,102 +54,7 @@ class AssistantResponse(BaseModel):
 # Supply-chain fact gathering (delegates to the deterministic backend data)
 # ---------------------------------------------------------------------------
 
-# Inline copies of the data so this module is self-contained and the existing
-# endpoints are not changed.  The single source of truth is still main.py;
-# if main.py ever switches to a real DB these helpers should call that DB too.
-
-SHIPMENTS = [
-    {
-        "shipment_id": "SHIP-001",
-        "origin": "Mumbai",
-        "destination": "Rotterdam",
-        "cargo_type": "Vaccines",
-        "cold_chain": True,
-        "cargo_value": 520000,
-        "status": "In Transit",
-        "risk_level": "High",
-    },
-    {
-        "shipment_id": "SHIP-002",
-        "origin": "Chennai",
-        "destination": "Singapore",
-        "cargo_type": "Perishable Food",
-        "cold_chain": True,
-        "cargo_value": 180000,
-        "status": "Delayed",
-        "risk_level": "Critical",
-    },
-    {
-        "shipment_id": "SHIP-003",
-        "origin": "Delhi",
-        "destination": "Dubai",
-        "cargo_type": "Electronics",
-        "cold_chain": False,
-        "cargo_value": 250000,
-        "status": "In Transit",
-        "risk_level": "Medium",
-    },
-]
-
-DISRUPTIONS = [
-    {
-        "disruption_id": "DISR-001",
-        "type": "Port Strike",
-        "location": "Rotterdam",
-        "severity": "High",
-        "status": "Active",
-        "expected_duration_hours": 48,
-        "description": "Labour strike affecting container handling and port operations.",
-    },
-    {
-        "disruption_id": "DISR-002",
-        "type": "Severe Weather",
-        "location": "Arabian Sea",
-        "severity": "Medium",
-        "status": "Monitoring",
-        "expected_duration_hours": 24,
-        "description": "Severe weather may delay vessel movement and port arrivals.",
-    },
-]
-
-FLEET = [
-    {
-        "asset_id": "TRUCK-017",
-        "asset_type": "Refrigerated Truck",
-        "location": "Rotterdam",
-        "capacity_tons": 20,
-        "available": True,
-        "refrigerated": True,
-        "utilisation_percent": 35,
-    },
-    {
-        "asset_id": "TRUCK-021",
-        "asset_type": "Standard Truck",
-        "location": "Mumbai",
-        "capacity_tons": 25,
-        "available": True,
-        "refrigerated": False,
-        "utilisation_percent": 80,
-    },
-    {
-        "asset_id": "TRUCK-034",
-        "asset_type": "Refrigerated Truck",
-        "location": "Dubai",
-        "capacity_tons": 18,
-        "available": False,
-        "refrigerated": True,
-        "utilisation_percent": 95,
-    },
-    {
-        "asset_id": "TRUCK-042",
-        "asset_type": "Standard Truck",
-        "location": "Delhi",
-        "capacity_tons": 22,
-        "available": True,
-        "refrigerated": False,
-        "utilisation_percent": 25,
-    },
-]
+# SHIPMENTS, DISRUPTIONS, FLEET are imported from .data (single source of truth)
 
 
 def _simulate_disruption(disruption_id: str, additional_hours: int) -> dict:
@@ -322,11 +234,14 @@ async def ask_assistant(body: AssistantRequest):
         f"User question: {body.question}"
     )
 
+    # Build conversation history for multi-turn context (last 4 pairs max)
+    history = [{"role": m.role, "content": m.content} for m in body.history[-8:]]
+
     provider = _get_provider()
     provider_name = type(provider).__name__
 
     try:
-        answer = provider.generate(SYSTEM_PROMPT, user_message)
+        answer = provider.generate(SYSTEM_PROMPT, user_message, history=history)
     except Exception as exc:  # noqa: BLE001
         logger.exception("AI provider error")
         raise HTTPException(status_code=502, detail=f"AI provider error: {exc}") from exc

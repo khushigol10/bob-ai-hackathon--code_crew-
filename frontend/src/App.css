@@ -406,6 +406,28 @@ main {
   line-height: 1.6;
 }
 
+.assistant-answer {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.assistant-answer p {
+  margin: 2px 0;
+}
+
+.assistant-answer ul {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.assistant-answer li {
+  margin: 2px 0;
+}
+
+.assistant-answer strong {
+  color: #1e293b;
+}
+
 .assistant-provider-badge {
   margin-left: 8px;
   background: #e0e7ff;

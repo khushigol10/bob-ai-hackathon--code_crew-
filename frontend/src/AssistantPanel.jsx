@@ -1,6 +1,88 @@
 import { useState, useRef, useEffect } from "react";
 
-const API_BASE = "http://localhost:8000";
+/**
+ * Minimal markdown → React renderer. Handles:
+ *   **bold**, *italic*, `code`, lines starting with "- " (bullets),
+ *   lines starting with "_(..." (muted note), and newlines → <br>.
+ * No external deps needed.
+ */
+function renderMarkdown(text) {
+  if (!text) return null;
+  const lines = text.split("\n");
+  const elements = [];
+  let keyIdx = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+
+    // Bullet line
+    if (/^\s*-\s+/.test(raw)) {
+      elements.push(
+        <li key={keyIdx++}>{inlineMarkdown(raw.replace(/^\s*-\s+/, ""))}</li>
+      );
+      continue;
+    }
+
+    // Muted note line (starts with _( or just _)
+    if (/^\s*_/.test(raw)) {
+      elements.push(
+        <p key={keyIdx++} style={{ color: "#94a3b8", fontSize: "12px", fontStyle: "italic", margin: "4px 0 0" }}>
+          {inlineMarkdown(raw.replace(/^_|_$/g, ""))}
+        </p>
+      );
+      continue;
+    }
+
+    // Empty line → small spacer
+    if (raw.trim() === "") {
+      elements.push(<div key={keyIdx++} style={{ height: "6px" }} />);
+      continue;
+    }
+
+    // Normal paragraph
+    elements.push(<p key={keyIdx++} style={{ margin: "2px 0" }}>{inlineMarkdown(raw)}</p>);
+  }
+
+  // Wrap consecutive <li> elements in a <ul>
+  const grouped = [];
+  let ulBuf = [];
+  let ulKey = 0;
+  for (const el of elements) {
+    if (el.type === "li") {
+      ulBuf.push(el);
+    } else {
+      if (ulBuf.length) {
+        grouped.push(<ul key={`ul-${ulKey++}`} style={{ margin: "4px 0", paddingLeft: "20px" }}>{ulBuf}</ul>);
+        ulBuf = [];
+      }
+      grouped.push(el);
+    }
+  }
+  if (ulBuf.length) {
+    grouped.push(<ul key={`ul-${ulKey++}`} style={{ margin: "4px 0", paddingLeft: "20px" }}>{ulBuf}</ul>);
+  }
+
+  return <>{grouped}</>;
+}
+
+function inlineMarkdown(text) {
+  // Split on **bold**, *italic*, `code` tokens
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+  return parts.map((part, i) => {
+    if (/^\*\*(.+)\*\*$/.test(part)) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    if (/^\*(.+)\*$/.test(part)) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    if (/^`(.+)`$/.test(part)) {
+      return <code key={i} style={{ background: "#f1f5f9", padding: "1px 4px", borderRadius: "3px", fontSize: "12px" }}>{part.slice(1, -1)}</code>;
+    }
+    return part;
+  });
+}
+
+const API_BASE = "";
 
 const SUGGESTED_QUESTIONS = [
   "What happens if the Rotterdam strike lasts another 48 hours?",
@@ -56,7 +138,7 @@ function Message({ msg }) {
           <span className="assistant-provider-badge">{msg.provider}</span>
         )}
       </span>
-      <p style={{ whiteSpace: "pre-wrap" }}>{msg.text}</p>
+      <div className="assistant-answer">{renderMarkdown(msg.text)}</div>
       <FactsBlock facts={msg.facts} />
     </div>
   );
@@ -80,11 +162,18 @@ export default function AssistantPanel() {
     setInput("");
     setLoading(true);
 
+    // Build last-N history for multi-turn context (exclude the message we just added)
+    const prevMessages = messages; // snapshot before the state update resolves
+    const history = prevMessages
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .slice(-8)
+      .map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.text }));
+
     try {
       const res = await fetch(`${API_BASE}/assistant`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q }),
+        body: JSON.stringify({ question: q, history }),
       });
 
       if (!res.ok) {

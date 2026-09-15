@@ -28,7 +28,7 @@ class AIProvider(ABC):
     """Minimal interface that every AI backend must satisfy."""
 
     @abstractmethod
-    def generate(self, system_prompt: str, user_message: str) -> str:
+    def generate(self, system_prompt: str, user_message: str, history: list[dict] | None = None) -> str:
         """Return a plain-text response string."""
 
 
@@ -59,11 +59,11 @@ class WatsonxProvider(AIProvider):
         )
         logger.info("WatsonxProvider initialised with model %s", model_id)
 
-    def generate(self, system_prompt: str, user_message: str) -> str:
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message},
-        ]
+    def generate(self, system_prompt: str, user_message: str, history: list[dict] | None = None) -> str:
+        messages = [{"role": "system", "content": system_prompt}]
+        if history:
+            messages.extend(history)
+        messages.append({"role": "user", "content": user_message})
         response = self._model.chat(messages=messages)
         # chat() returns a dict with choices[0].message.content
         try:
@@ -79,19 +79,104 @@ class WatsonxProvider(AIProvider):
 
 class FallbackProvider(AIProvider):
     """
-    Returns a structured plain-text answer built directly from the facts dict
-    without calling any external API.  Useful for demo/development when
-    watsonx credentials are not yet configured.
+    Generates a useful structured answer from the facts dict without any
+    external API call.  Used when watsonx credentials are not configured.
     """
 
-    def generate(self, system_prompt: str, user_message: str) -> str:  # noqa: ARG002
-        return (
-            "IBM watsonx.ai is not yet configured.\n\n"
-            "The structured data above contains the deterministic facts "
-            "computed by the backend.  To enable AI-generated explanations, "
-            "set the WATSONX_API_KEY, WATSONX_PROJECT_ID, and WATSONX_URL "
-            "environment variables and restart the server."
+    def generate(self, system_prompt: str, user_message: str, history: list[dict] | None = None) -> str:  # noqa: ARG002
+        import json as _json
+        import re as _re
+
+        # Extract the JSON block embedded in user_message by assistant.py
+        json_match = _re.search(r"```json\n(.*?)```", user_message, _re.DOTALL)
+        if not json_match:
+            return "No structured data available to answer this question."
+
+        try:
+            facts = _json.loads(json_match.group(1))
+        except _json.JSONDecodeError:
+            return "Could not parse structured backend data."
+
+        lines: list[str] = []
+
+        # ── Summary ─────────────────────────────────────────────────────────
+        summary = facts.get("summary", {})
+        if summary:
+            lines.append(
+                f"**Current status:** {summary.get('total_shipments', '?')} shipments tracked, "
+                f"{summary.get('active_disruptions', 0)} active disruption(s), "
+                f"{summary.get('high_risk_shipments', 0)} at high/critical risk, "
+                f"{summary.get('available_fleet_count', 0)} fleet assets available."
+            )
+
+        # ── Simulation ───────────────────────────────────────────────────────
+        sim = facts.get("simulation")
+        if sim and "error" not in sim:
+            d = sim.get("disruption", {})
+            lines.append(
+                f"\n**What-if simulation — {d.get('type', 'disruption')} at {d.get('location', '?')}:**"
+            )
+            lines.append(
+                f"- Original duration: {d.get('expected_duration_hours', '?')}h  "
+                f"→ projected total: {sim.get('projected_total_duration_hours', '?')}h "
+                f"(+{sim.get('additional_hours', '?')}h added)"
+            )
+            lines.append(f"- Shipments impacted: {len(sim.get('impacted_shipments', []))}")
+            lines.append(f"- Cold-chain shipments at risk: {sim.get('cold_chain_shipment_count', 0)}")
+            lines.append(
+                f"- Total cargo value at risk: "
+                f"${sim.get('total_cargo_value_at_risk', 0):,.0f}"
+            )
+            lines.append(f"- **Projected risk: {sim.get('projected_risk', '?').upper()}**")
+            lines.append(f"- Recommendation: {sim.get('recommendation', '')}")
+
+        # ── Shipments by risk ────────────────────────────────────────────────
+        by_risk = facts.get("shipments_by_risk")
+        if by_risk:
+            lines.append("\n**Shipments ranked by risk:**")
+            for s in by_risk:
+                cold = " ❄️" if s.get("cold_chain") else ""
+                lines.append(
+                    f"- {s['shipment_id']}: {s['origin']} -> {s['destination']}  "
+                    f"{s['cargo_type']}{cold}  |  ${s['cargo_value']:,}  |  "
+                    f"**{s['risk_level']}** ({s['status']})"
+                )
+
+        # ── Fleet recommendation ─────────────────────────────────────────────
+        fleet_rec = facts.get("fleet_recommendation")
+        if fleet_rec and "error" not in fleet_rec:
+            rec = fleet_rec.get("recommendation")
+            shipment = fleet_rec.get("shipment", {})
+            if rec:
+                lines.append(
+                    f"\n**Fleet recommendation for {shipment.get('shipment_id', '?')} "
+                    f"({shipment.get('cargo_type', '?')}):**"
+                )
+                lines.append(
+                    f"- Recommended asset: **{rec['asset_id']}** "
+                    f"({rec['asset_type']}, {rec['location']})"
+                )
+                lines.append(
+                    f"- Capacity: {rec['capacity_tons']}t  |  "
+                    f"Utilisation: {rec['utilisation_percent']}%  |  "
+                    f"Refrigerated: {'Yes' if rec['refrigerated'] else 'No'}"
+                )
+                lines.append(
+                    "- Reason: asset is available, has sufficient capacity"
+                    + (", and supports cold-chain refrigeration." if shipment.get("cold_chain") else ".")
+                )
+
+        if not lines:
+            return (
+                "I have the backend data but could not identify a specific answer. "
+                "Try asking about shipment risk, the Rotterdam disruption, or fleet allocation."
+            )
+
+        lines.append(
+            "\n_(Note: AI-generated prose is disabled — set WATSONX_API_KEY to enable "
+            "watsonx.ai explanations.)_"
         )
+        return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------

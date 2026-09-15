@@ -1,21 +1,21 @@
 # Problem Statement
 
-## Background
+## Context
 
-[Describe the broader context. What domain or industry does this problem belong to? What situation creates the problem?]
+Global supply chains move trillions of dollars of goods every year across sea, air, and land. Disruptions — port strikes, severe weather events, geopolitical incidents — are not rare exceptions; they are routine occurrences that operations teams must respond to within hours.
 
 ## The Problem
 
-[State the problem clearly and specifically. Avoid vague statements like "things are slow" — instead say "Operations teams spend an average of 45 minutes per incident diagnosing pipeline failures because logs are scattered across 6 different tools."]
+When a disruption hits, operations managers face three urgent questions simultaneously:
 
-## Who is Affected
+1. **Which of my shipments are actually affected?** — Matching disruption locations to active routes requires checking dozens of shipments manually.
+2. **How bad will it get if this drags on?** — A 48-hour port closure is manageable; a 96-hour closure with cold-chain cargo in transit is a critical spoilage event. Without simulation, teams guess.
+3. **Which fleet assets should I redeploy?** — Cold-chain cargo requires refrigerated trucks. Knowing which assets are available, where they are, and what their current utilisation is requires querying multiple systems.
 
-[Describe the specific user or persona experiencing this problem. Be concrete — not "developers" but "backend engineers managing CI/CD pipelines in enterprises with 50+ microservices."]
+Current tools are either too slow (spreadsheets), too siloed (separate systems for tracking, fleet, and risk), or too opaque (dashboards that show the problem but not the solution).
 
-## Why It Matters
+## Who Experiences This Problem
 
-[What is the cost of this problem? Lost time? Revenue? Safety risk? Frustration? Quantify if possible.]
-
-## Why Existing Solutions Fall Short
-
-[Briefly explain what people currently do and why it doesn't fully solve the problem. This sets up why your solution is needed.]
+- **Supply chain operations managers** at logistics companies and manufacturers managing time-sensitive or temperature-sensitive cargo (pharmaceuticals, food, electronics)
+- **Fleet coordinators** who need to rebalance assets across locations in response to disruptions
+- **Risk analysts** who need to quantify cargo value exposure before escalating to senior leadership

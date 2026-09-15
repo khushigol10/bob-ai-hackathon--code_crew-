@@ -1,0 +1,15 @@
+# L2 Supply Chain Disruption Assistant — backend dependencies
+# Python 3.11+ required (tested on 3.14)
+#
+# Install:  pip install -r requirements.txt
+# Run:      uvicorn app.main:app --reload  (from src/backend/)
+
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.6.0
+python-dotenv>=1.0.0
+
+# ── Optional: IBM watsonx.ai (enables AI-generated answers) ─────────────────
+# Without this the assistant uses the built-in FallbackProvider instead.
+# Install with: pip install ibm-watsonx-ai
+# ibm-watsonx-ai>=1.1.0
